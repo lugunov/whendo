@@ -27,3 +27,7 @@ def create_event(event: schemas.EventCreate, db: Session = Depends(get_db)):
 @app.get("/events/", response_model=list[schemas.Event])
 def read_events(db: Session = Depends(get_db)):
     return crud.get_all_events(db)
+
+@app.get("/event-types/{event_type_id}/reminders", response_model=list[int])
+def get_reminder_schedule(event_type_id: int, db: Session = Depends(get_db)):
+    return crud.get_reminder_days(event_type_id, db)

@@ -36,3 +36,39 @@ def create_event(db: Session, event: schemas.EventCreate):
 
 def get_all_events(db: Session):
     return db.query(models.Event).order_by(models.Event.created_at.desc()).all()
+
+def get_intervals_for_event_type(db: Session, event_type_id: int) -> list[int]:
+    events = (
+        db.query(models.Event)
+        .filter(models.Event.event_type_id == event_type_id)
+        .order_by(models.Event.created_at.asc())
+        .all()
+    )
+
+    intervals = []
+    for i in range(1, len(events)):
+        delta = events[i].created_at - events[i - 1].created_at
+        intervals.append(delta.days)
+
+    return intervals
+
+def get_reminder_days(event_type_id: int, db: Session) -> list[int]:
+    intervals = get_intervals_for_event_type(db, event_type_id)
+    
+    if not intervals:
+        return []  # Недостаточно данных
+
+    avg_interval = sum(intervals) // len(intervals)
+
+    # Пример: дни до следующего события
+    # (можно заменить на числа Фибоначчи [13, 17, 19] ближе к avg_interval)
+    reminder_days = []
+    current = 0
+    fib1, fib2 = 1, 2
+
+    while fib2 < avg_interval:
+        reminder_days.append(avg_interval - fib2)
+        fib1, fib2 = fib2, fib1 + fib2
+
+    # Убираем повторы и сортируем по возрастанию
+    return sorted(set(reminder_days))
