@@ -1,9 +1,34 @@
 from sqlalchemy.orm import Session
-from . import models, schemas
 from datetime import datetime
+from rapidfuzz import fuzz
+from .models import Event, EventType
+
+from . import models, schemas
+
+SIMILARITY_THRESHOLD = 70  # порог похожести в %
+
+def find_similar_event_type(db: Session, description: str):
+    all_types = db.query(EventType).all()
+    for etype in all_types:
+        score = fuzz.partial_ratio(description.lower(), etype.name.lower())
+        if score >= SIMILARITY_THRESHOLD:
+            return etype
+    return None
 
 def create_event(db: Session, event: schemas.EventCreate):
-    db_event = models.Event(description=event.description, created_at=datetime.utcnow())
+    matched_type = find_similar_event_type(db, event.description)
+
+    if matched_type is None:
+        matched_type = EventType(name=event.description)
+        db.add(matched_type)
+        db.commit()
+        db.refresh(matched_type)
+
+    db_event = Event(
+        description=event.description,
+        created_at=datetime.utcnow(),
+        event_type_id=matched_type.id
+    )
     db.add(db_event)
     db.commit()
     db.refresh(db_event)
